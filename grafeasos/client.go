@@ -41,14 +41,16 @@ func (g *Client) NewPayloadBody(reference reference.Canonical) (string, error) {
 
 // AddAttestationToImage adds a new attestation with the passed Attestation
 // to the image described by ImageData.
-func (g *Client) AddAttestationToImage(ctx context.Context, reference reference.Canonical, payload voucher.Attestation) (interface{}, error) {
+func (g *Client) AddAttestationToImage(ctx context.Context, reference reference.Canonical, payload voucher.Attestation) (voucher.SignedAttestation, error) {
+	signedAttestation := voucher.SignedAttestation{}
+
 	if !g.CanAttest() {
-		return nil, errCannotAttest
+		return signedAttestation, errCannotAttest
 	}
 
 	signed, err := voucher.SignAttestation(g.keyring, payload)
 	if nil != err {
-		return nil, err
+		return signedAttestation, err
 	}
 
 	binauthProjectPath := "projects/" + g.binauthProject
@@ -59,14 +61,13 @@ func (g *Client) AddAttestationToImage(ctx context.Context, reference reference.
 		PgpKeyId: signed.KeyID, ContentType: &contentType}}}
 
 	occurrence := g.getCreateOccurrence(reference, payload.CheckName, &attestation, binauthProjectPath)
-	occ, _, err := g.grafeas.CreateOccurrence(ctx, binauthProjectPath, occurrence)
+	_, _, err = g.grafeas.CreateOccurrence(ctx, binauthProjectPath, occurrence)
 
 	if isAttestionExistsErr(err) {
 		err = nil
-		occ = grafeaspb.V1beta1Occurrence{}
 	}
 
-	return &occ, err
+	return signed, err
 }
 
 // GetAttestations returns all of the attestations associated with an image
