@@ -71,26 +71,11 @@ func (g *Client) AddAttestationToImage(ctx context.Context, reference reference.
 
 // GetAttestations returns all of the attestations associated with an image
 func (g *Client) GetAttestations(ctx context.Context, reference reference.Canonical) ([]voucher.SignedAttestation, error) {
-	// TODO
 	// filterStr := kindFilterStr(reference, grafeaspb.ATTESTATION_V1beta1NoteKind)
 
 	var attestations []voucher.SignedAttestation
 
 	return attestations, nil
-}
-
-func (g *Client) getCreateOccurrence(reference reference.Canonical, parentNoteID string, attestation *grafeaspb.V1beta1attestationDetails, binauthProjectPath string) grafeaspb.V1beta1Occurrence {
-	noteName := binauthProjectPath + "/notes/" + parentNoteID
-
-	resource := grafeaspb.V1beta1Resource{
-		Uri: "https://" + reference.Name() + "@" + reference.Digest().String(),
-	}
-
-	noteKind := grafeaspb.ATTESTATION_V1beta1NoteKind
-
-	occurrence := grafeaspb.V1beta1Occurrence{Resource: &resource, NoteName: noteName, Kind: &noteKind, Attestation: attestation}
-
-	return occurrence
 }
 
 func (g *Client) getVulnerabilityDiscoveries(ctx context.Context) (items []grafeaspb.V1beta1Occurrence, err error) {
