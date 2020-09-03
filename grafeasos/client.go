@@ -67,7 +67,16 @@ func (g *Client) AddAttestationToImage(ctx context.Context, reference reference.
 	}
 
 	return &occ, err
+}
 
+// GetAttestations returns all of the attestations associated with an image
+func (g *Client) GetAttestations(ctx context.Context, reference reference.Canonical) ([]voucher.SignedAttestation, error) {
+	// TODO
+	// filterStr := kindFilterStr(reference, grafeaspb.ATTESTATION_V1beta1NoteKind)
+
+	var attestations []voucher.SignedAttestation
+
+	return attestations, nil
 }
 
 func (g *Client) getCreateOccurrence(reference reference.Canonical, parentNoteID string, attestation *grafeaspb.V1beta1attestationDetails, binauthProjectPath string) grafeaspb.V1beta1Occurrence {
@@ -191,7 +200,7 @@ func (g *Client) GetVulnerabilities(ctx context.Context, reference reference.Can
 // Close closes the Grafeas client.
 func (g *Client) Close() {}
 
-// // GetBuildDetail gets BuildDetails for the passed image.
+// GetBuildDetail gets BuildDetails for the passed image.
 func (g *Client) GetBuildDetail(ctx context.Context, reference reference.Canonical) (repository.BuildDetail, error) {
 	kind := grafeaspb.BUILD_V1beta1NoteKind
 	occurrences, err := g.getNotesOccurrencesForKind(ctx, kind, isTypeNote)
