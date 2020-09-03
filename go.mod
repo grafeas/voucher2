@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.52.0
 	github.com/DataDog/datadog-go v3.4.0+incompatible
 	github.com/Shopify/ejson v1.2.0
+	github.com/antihax/optional v1.0.0 // indirect
 	github.com/bradleyfalzon/ghinstallation v1.1.1
 	github.com/coreos/clair v2.0.5+incompatible
 	github.com/docker/distribution v2.6.0-rc.1.0.20180913220339-b089e9168825+incompatible

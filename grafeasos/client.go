@@ -6,7 +6,10 @@ import (
 
 	"github.com/Shopify/voucher"
 	"github.com/Shopify/voucher/attestation"
+	"github.com/Shopify/voucher/containeranalysis"
+	"github.com/Shopify/voucher/repository"
 	"github.com/Shopify/voucher/signer"
+	"github.com/antihax/optional"
 	"github.com/docker/distribution/reference"
 	grafeaspb "github.com/grafeas/client-go/0.1.0"
 )
@@ -79,4 +82,143 @@ func (g *Client) getCreateOccurrence(reference reference.Canonical, parentNoteID
 	occurrence := grafeaspb.V1beta1Occurrence{Resource: &resource, NoteName: noteName, Kind: &noteKind, Attestation: attestation}
 
 	return occurrence
+}
+
+func (g *Client) getVulnerabilityDiscoveries(ctx context.Context) (items []grafeaspb.V1beta1Occurrence, err error) {
+	occurrences, err := g.getNotesOccurrencesForKind(ctx, grafeaspb.DISCOVERY_V1beta1NoteKind, isDiscoveryVulnerabilityNote)
+
+	items = append(items, occurrences...)
+
+	if 0 == len(items) && nil == err {
+		err = &voucher.NoMetadataError{
+			Type: containeranalysis.DiscoveryType,
+			Err:  errNoOccurrences,
+		}
+	}
+	return
+}
+
+func (g *Client) getNotesOccurrencesForKind(ctx context.Context, noteKind grafeaspb.V1beta1NoteKind, fn noteTest) (items []grafeaspb.V1beta1Occurrence, err error) {
+	optsNotes := &grafeaspb.ListNotesOpts{}
+	project := projectPath(g.imageProject)
+	notesResponse, httpResponse, err := g.grafeas.ListNotes(ctx, project, optsNotes)
+	if err != nil {
+		return
+	}
+
+	if httpResponse.StatusCode != 200 {
+		return
+	}
+
+	for {
+		for _, note := range notesResponse.Notes {
+			if fn(&note, noteKind) {
+				noteOccurrences, errOcc := g.getOccurrencesForNote(ctx, note.Name, noteKind)
+				if errOcc != nil && err == nil {
+					err = errOcc
+					continue
+				}
+				items = append(items, noteOccurrences...)
+			}
+		}
+		if notesResponse.NextPageToken == "" {
+			break
+		}
+
+		optsNotes.PageToken = optional.NewString(notesResponse.NextPageToken)
+		notesResponse, _, err = g.grafeas.ListNotes(ctx, project, optsNotes)
+		if nil != err {
+			break
+		}
+	}
+
+	return
+}
+
+func (g *Client) getOccurrencesForNote(ctx context.Context, noteName string, noteKind grafeaspb.V1beta1NoteKind) (items []grafeaspb.V1beta1Occurrence, err error) {
+	optsOccurrences := &grafeaspb.ListNoteOccurrencesOpts{PageSize: optional.NewInt32(5)}
+	occsResponse, _, errOcc := g.grafeas.ListNoteOccurrences(ctx, noteName, optsOccurrences)
+	if errOcc != nil {
+		err = errOcc
+		return
+	}
+	for {
+		for i, occ := range occsResponse.Occurrences {
+			if noteKind == *occ.Kind {
+				items = append(items, occsResponse.Occurrences[i])
+			}
+		}
+		if occsResponse.NextPageToken == "" {
+			break
+		}
+
+		optsOccurrences.PageToken = optional.NewString(occsResponse.NextPageToken)
+		occsResponse, _, err = g.grafeas.ListNoteOccurrences(ctx, noteName, optsOccurrences)
+		if nil != err {
+			break
+		}
+	}
+	return
+}
+
+// GetVulnerabilities returns the detected vulnerabilities for the Image described by voucher.ImageData.
+func (g *Client) GetVulnerabilities(ctx context.Context, reference reference.Canonical) (items []voucher.Vulnerability, err error) {
+	err = pollForDiscoveries(ctx, g)
+	if nil != err {
+		return []voucher.Vulnerability{}, err
+	}
+
+	kind := grafeaspb.VULNERABILITY_V1beta1NoteKind
+	occurrences, err := g.getNotesOccurrencesForKind(ctx, kind, isTypeNote)
+	if nil != err {
+		return []voucher.Vulnerability{}, err
+	}
+	for _, occ := range occurrences {
+		item := OccurrenceToVulnerability(&occ)
+		items = append(items, item)
+	}
+
+	if 0 == len(items) && nil == err {
+		err = &voucher.NoMetadataError{
+			Type: voucher.VulnerabilityType,
+			Err:  errNoOccurrences,
+		}
+	}
+
+	return
+}
+
+// Close closes the Grafeas client.
+func (g *Client) Close() {}
+
+// // GetBuildDetail gets BuildDetails for the passed image.
+func (g *Client) GetBuildDetail(ctx context.Context, reference reference.Canonical) (repository.BuildDetail, error) {
+	kind := grafeaspb.BUILD_V1beta1NoteKind
+	occurrences, err := g.getNotesOccurrencesForKind(ctx, kind, isTypeNote)
+	if nil != err {
+		return repository.BuildDetail{}, err
+	}
+
+	// we should only have 1 occurrence based on our kind specified
+	if nil == err && len(occurrences) != 1 {
+		if len(occurrences) == 0 {
+			return repository.BuildDetail{}, &voucher.NoMetadataError{Type: voucher.BuildDetailsType, Err: errNoOccurrences}
+		}
+
+		return repository.BuildDetail{}, errors.New("Found multiple Grafeas occurrences for " + reference.String())
+	}
+
+	return OccurrenceToBuildDetail(&occurrences[0]), nil
+}
+
+// NewClient creates a new Grafeas Client.
+func NewClient(ctx context.Context, imageProject, binauthProject string, keyring signer.AttestationSigner, config *grafeaspb.Configuration) (*Client, error) {
+	client := new(Client)
+	client.grafeas = grafeaspb.NewAPIClient(config).GrafeasV1Beta1Api
+
+	client.keyring = keyring
+	client.binauthProject = binauthProject
+	client.imageProject = imageProject
+
+	return client, nil
 }
