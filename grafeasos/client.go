@@ -70,11 +70,50 @@ func (g *Client) AddAttestationToImage(ctx context.Context, reference reference.
 	return signed, err
 }
 
+// OccurrenceToAttestation converts an Occurrence to a Attestation
+func OccurrenceToAttestation(checkName string, occ *grafeaspb.V1beta1Occurrence) voucher.SignedAttestation {
+	signedAttestation := voucher.SignedAttestation{
+		Attestation: voucher.Attestation{
+			CheckName: checkName,
+		},
+	}
+
+	attestationDetails := occ.Attestation
+
+	signedAttestation.Body = string(*attestationDetails.Attestation.GenericSignedAttestation.ContentType)
+
+	return signedAttestation
+}
+
 // GetAttestations returns all of the attestations associated with an image
 func (g *Client) GetAttestations(ctx context.Context, reference reference.Canonical) ([]voucher.SignedAttestation, error) {
 	// filterStr := kindFilterStr(reference, grafeaspb.ATTESTATION_V1beta1NoteKind)
 
+	var occ []grafeaspb.V1beta1Occurrence
+
 	var attestations []voucher.SignedAttestation
+
+	project := projectPath(g.binauthProject)
+
+	createOccs := grafeaspb.V1beta1BatchCreateOccurrencesRequest{Parent: project, Occurrences: occ}
+
+	occs, httpResponse, err := g.grafeas.BatchCreateOccurrences(ctx, project, createOccs)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if httpResponse.StatusCode != 200 {
+		return nil, err
+	}
+
+	for _, oc := range occs.Occurrences {
+		note := oc.NoteName
+		attestations = append(
+			attestations,
+			OccurrenceToAttestation(note, &oc),
+		)
+	}
 
 	return attestations, nil
 }
