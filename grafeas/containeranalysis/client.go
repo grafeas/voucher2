@@ -13,6 +13,7 @@ import (
 
 	"github.com/Shopify/voucher"
 	"github.com/Shopify/voucher/attestation"
+	vgrafeas "github.com/Shopify/voucher/grafeas"
 	"github.com/Shopify/voucher/repository"
 	"github.com/Shopify/voucher/signer"
 )
@@ -63,7 +64,7 @@ func (g *Client) AddAttestationToImage(ctx context.Context, reference reference.
 		),
 	)
 
-	if isAttestionExistsErr(err) {
+	if vgrafeas.IsAttestationExistsErr(err) {
 		err = nil
 
 		signedAttestation.Signature = ""
@@ -74,11 +75,11 @@ func (g *Client) AddAttestationToImage(ctx context.Context, reference reference.
 
 // GetAttestations returns all of the attestations associated with an image.
 func (g *Client) GetAttestations(ctx context.Context, reference reference.Canonical) ([]voucher.SignedAttestation, error) {
-	filterStr := kindFilterStr(reference, grafeas.NoteKind_ATTESTATION)
+	filterStr := vgrafeas.KindFilterStr(reference, grafeas.NoteKind_ATTESTATION)
 
 	var attestations []voucher.SignedAttestation
 
-	project := projectPath(g.binauthProject)
+	project := vgrafeas.ProjectPath(g.binauthProject)
 	req := &grafeas.ListOccurrencesRequest{Parent: project, Filter: filterStr}
 	occIterator := g.containeranalysis.ListOccurrences(ctx, req)
 
@@ -112,14 +113,14 @@ func (g *Client) GetAttestations(ctx context.Context, reference reference.Canoni
 
 // GetVulnerabilities returns the detected vulnerabilities for the Image described by voucher.ImageData.
 func (g *Client) GetVulnerabilities(ctx context.Context, reference reference.Canonical) (vulnerabilities []voucher.Vulnerability, err error) {
-	filterStr := kindFilterStr(reference, grafeas.NoteKind_VULNERABILITY)
+	filterStr := vgrafeas.KindFilterStr(reference, grafeas.NoteKind_VULNERABILITY)
 
 	err = pollForDiscoveries(ctx, g, reference)
 	if nil != err {
 		return []voucher.Vulnerability{}, err
 	}
 
-	project := projectPath(g.imageProject)
+	project := vgrafeas.ProjectPath(g.imageProject)
 	req := &grafeas.ListOccurrencesRequest{Parent: project, Filter: filterStr}
 	occIterator := g.containeranalysis.ListOccurrences(ctx, req)
 
@@ -154,9 +155,9 @@ func (g *Client) Close() {
 func (g *Client) GetBuildDetail(ctx context.Context, reference reference.Canonical) (repository.BuildDetail, error) {
 	var err error
 
-	filterStr := kindFilterStr(reference, grafeas.NoteKind_BUILD)
+	filterStr := vgrafeas.KindFilterStr(reference, grafeas.NoteKind_BUILD)
 
-	project := projectPath(g.imageProject)
+	project := vgrafeas.ProjectPath(g.imageProject)
 	req := &grafeas.ListOccurrencesRequest{Parent: project, Filter: filterStr}
 	occIterator := g.containeranalysis.ListOccurrences(ctx, req)
 
@@ -165,7 +166,7 @@ func (g *Client) GetBuildDetail(ctx context.Context, reference reference.Canonic
 		if err == iterator.Done {
 			err = &voucher.NoMetadataError{
 				Type: voucher.VulnerabilityType,
-				Err:  errNoOccurrences,
+				Err:  vgrafeas.ErrNoOccurrences,
 			}
 		}
 		return repository.BuildDetail{}, err
