@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/Shopify/voucher"
-	"github.com/Shopify/voucher/grafeas"
+	vgrafeas "github.com/Shopify/voucher/grafeas"
 	"github.com/Shopify/voucher/grafeas/rest/objects"
 )
 
@@ -46,7 +46,7 @@ func pollForDiscoveries(ctx context.Context, c *Client) error {
 		}
 		time.Sleep(sleep)
 	}
-	return grafeas.ErrDiscoveriesUnfinished
+	return vgrafeas.ErrDiscoveriesUnfinished
 }
 
 func getVulnerabilityDiscoveries(ctx context.Context, g *Client) (items []objects.Occurrence, err error) {
@@ -60,8 +60,8 @@ func getVulnerabilityDiscoveries(ctx context.Context, g *Client) (items []object
 
 	if 0 == len(items) && nil == err {
 		err = &voucher.NoMetadataError{
-			Type: grafeas.DiscoveryType,
-			Err:  grafeas.ErrNoOccurrences,
+			Type: vgrafeas.DiscoveryType,
+			Err:  vgrafeas.ErrNoOccurrences,
 		}
 	}
 	return

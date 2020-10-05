@@ -15,7 +15,7 @@ import (
 
 	"github.com/Shopify/voucher"
 	"github.com/Shopify/voucher/attestation"
-	"github.com/Shopify/voucher/grafeas"
+	vgrafeas "github.com/Shopify/voucher/grafeas"
 	mocks "github.com/Shopify/voucher/grafeas/rest/mocks"
 	"github.com/Shopify/voucher/grafeas/rest/objects"
 	"github.com/Shopify/voucher/repository"
@@ -175,7 +175,7 @@ func TestGetAttestations(t *testing.T) {
 			},
 			expectedError: &voucher.NoMetadataError{
 				Type: voucher.AttestationType,
-				Err:  grafeas.ErrNoOccurrences,
+				Err:  vgrafeas.ErrNoOccurrences,
 			},
 		},
 	}
@@ -224,7 +224,7 @@ func TestGetVulnerabilities(t *testing.T) {
 			},
 			expectedError: &voucher.NoMetadataError{
 				Type: voucher.VulnerabilityType,
-				Err:  grafeas.ErrNoOccurrences,
+				Err:  vgrafeas.ErrNoOccurrences,
 			},
 		},
 	}
@@ -276,7 +276,7 @@ func TestGetBuildDetail(t *testing.T) {
 			},
 			expectedError: &voucher.NoMetadataError{
 				Type: voucher.BuildDetailsType,
-				Err:  grafeas.ErrNoOccurrences,
+				Err:  vgrafeas.ErrNoOccurrences,
 			},
 		},
 	}

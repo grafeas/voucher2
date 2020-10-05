@@ -6,7 +6,7 @@ import (
 
 	"github.com/Shopify/voucher"
 	"github.com/Shopify/voucher/attestation"
-	"github.com/Shopify/voucher/grafeas"
+	vgrafeas "github.com/Shopify/voucher/grafeas"
 	"github.com/Shopify/voucher/grafeas/rest/objects"
 	"github.com/Shopify/voucher/repository"
 	"github.com/Shopify/voucher/signer"
@@ -55,7 +55,7 @@ func (g *Client) AddAttestationToImage(ctx context.Context, reference reference.
 		return voucher.SignedAttestation{}, err
 	}
 
-	binauthProjectPath := grafeas.ProjectPath(g.binauthProject)
+	binauthProjectPath := vgrafeas.ProjectPath(g.binauthProject)
 	contentType := objects.AttestationSigningJSON
 
 	attestation := objects.AttestationDetails{Attestation: &objects.Attestation{
@@ -65,7 +65,7 @@ func (g *Client) AddAttestationToImage(ctx context.Context, reference reference.
 	occurrence := objects.NewOccurrence(reference, payload.CheckName, &attestation, binauthProjectPath)
 	_, err = g.grafeas.CreateOccurrence(ctx, binauthProjectPath, occurrence)
 
-	if grafeas.IsAttestationExistsErr(err) {
+	if vgrafeas.IsAttestationExistsErr(err) {
 		err = nil
 		signedAttestation.Signature = ""
 	}
@@ -82,19 +82,20 @@ func (g *Client) GetAttestations(ctx context.Context, reference reference.Canoni
 		return []voucher.SignedAttestation{}, err
 	}
 	for _, occ := range occurrences {
-		if *occ.Kind == objects.NoteKindAttestation {
-			note := occ.NoteName
-			attestations = append(
-				attestations,
-				objects.OccurrenceToAttestation(note, &occ),
-			)
+		if *occ.Kind != objects.NoteKindAttestation {
+			continue
 		}
+		note := occ.NoteName
+		attestations = append(
+			attestations,
+			objects.OccurrenceToAttestation(note, &occ),
+		)
 	}
 
 	if 0 == len(attestations) && nil == err {
 		err = &voucher.NoMetadataError{
 			Type: voucher.AttestationType,
-			Err:  grafeas.ErrNoOccurrences,
+			Err:  vgrafeas.ErrNoOccurrences,
 		}
 	}
 
@@ -113,16 +114,17 @@ func (g *Client) GetVulnerabilities(ctx context.Context, reference reference.Can
 		return []voucher.Vulnerability{}, err
 	}
 	for _, occ := range occurrences {
-		if *occ.Kind == objects.NoteKindVulnerability {
-			item := objects.OccurrenceToVulnerability(&occ, vulProject)
-			items = append(items, item)
+		if *occ.Kind != objects.NoteKindVulnerability {
+			continue
 		}
+		item := objects.OccurrenceToVulnerability(&occ, vulProject)
+		items = append(items, item)
 	}
 
 	if 0 == len(items) && nil == err {
 		err = &voucher.NoMetadataError{
 			Type: voucher.VulnerabilityType,
-			Err:  grafeas.ErrNoOccurrences,
+			Err:  vgrafeas.ErrNoOccurrences,
 		}
 	}
 
@@ -148,7 +150,7 @@ func (g *Client) GetBuildDetail(ctx context.Context, reference reference.Canonic
 	// we should only have 1 occurrence based on our kind specified
 	if nil == err && len(occurrences) != 1 {
 		if len(occurrences) == 0 {
-			return repository.BuildDetail{}, &voucher.NoMetadataError{Type: voucher.BuildDetailsType, Err: grafeas.ErrNoOccurrences}
+			return repository.BuildDetail{}, &voucher.NoMetadataError{Type: voucher.BuildDetailsType, Err: vgrafeas.ErrNoOccurrences}
 		}
 
 		return repository.BuildDetail{}, errors.New("Found multiple Grafeas occurrences for " + reference.String())
@@ -158,7 +160,7 @@ func (g *Client) GetBuildDetail(ctx context.Context, reference reference.Canonic
 }
 
 func (g *Client) getAllOccurrences(ctx context.Context) (items []objects.Occurrence, err error) {
-	project := grafeas.ProjectPath(g.binauthProject)
+	project := vgrafeas.ProjectPath(g.binauthProject)
 
 	occResp, err := g.grafeas.ListOccurrences(ctx, project, nil)
 	if err != nil {
