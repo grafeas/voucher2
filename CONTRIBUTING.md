@@ -13,7 +13,7 @@ Checks work.
 - Setup a [Go development environment](https://golang.org/doc/install#install)
 if you haven't already.
 
-- Get the Shopify version the project by using Go get:
+- Get the source code by using Go get:
 
 ```
 $ go get -u github.com/grafeas/voucher
@@ -58,7 +58,7 @@ $ git push -u <your username> <the name of your branch>
 
 ## Send in your changes
 
-- Sign the [Contributor License Agreement](https://cla.shopify.com).
+- Sign the [Contributor License Agreement](https://cla.developers.google.com/)
 
 - Run the test suite and make certain that the tests are not failing. If you
 are adding code which would be untested, please consider adding tests to cover
