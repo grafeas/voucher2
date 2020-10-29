@@ -9,7 +9,7 @@ import (
 	"github.com/docker/distribution/reference"
 	"golang.org/x/oauth2"
 
-	"github.com/Shopify/voucher"
+	"github.com/grafeas/voucher"
 )
 
 type testTokenSource struct {
